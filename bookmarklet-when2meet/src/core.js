@@ -188,6 +188,54 @@
     return parseDatasetFromHtml(html);
   }
 
+  function normalizeSlotLabel(text) {
+    return String(text || "").replace(/\s+/g, " ").trim();
+  }
+
+  function formatSlotLabelForZone(epochSeconds, timeZone) {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      weekday: "long",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
+    return normalizeSlotLabel(formatter.format(new Date(epochSeconds * 1000)).replace(",", ""));
+  }
+
+  function inferDisplayTimeZoneFromHtml(html) {
+    if (typeof html !== "string" || !html) {
+      return DISPLAY_TIME_ZONE;
+    }
+
+    const slotMatches = [...html.matchAll(/ShowSlot\((\d+),&quot;([^&]+)&quot;\)/g)].slice(0, 24);
+    if (!slotMatches.length) {
+      return DISPLAY_TIME_ZONE;
+    }
+
+    const candidates = [...new Set(["UTC", DISPLAY_TIME_ZONE])];
+    let bestZone = DISPLAY_TIME_ZONE;
+    let bestScore = -1;
+
+    for (const timeZone of candidates) {
+      let score = 0;
+      for (const [, epochText, label] of slotMatches) {
+        const epochSeconds = Number(epochText);
+        if (!Number.isFinite(epochSeconds)) continue;
+        if (formatSlotLabelForZone(epochSeconds, timeZone) === normalizeSlotLabel(label)) {
+          score += 1;
+        }
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        bestZone = timeZone;
+      }
+    }
+
+    return bestScore > 0 ? bestZone : DISPLAY_TIME_ZONE;
+  }
+
   function filterDatasetByPersonIds(dataset, excludedPersonIds) {
     if (!excludedPersonIds || (excludedPersonIds instanceof Set ? excludedPersonIds.size === 0 : excludedPersonIds.length === 0)) {
       return dataset;
@@ -531,9 +579,10 @@
 
   function analyzeHtml(html, options = {}) {
     const extracted = parseDatasetFromHtml(html);
+    const timeZone = options.timeZone || inferDisplayTimeZoneFromHtml(html);
     return {
       source: extracted.source,
-      ...analyzeDataset(extracted.dataset, options),
+      ...analyzeDataset(extracted.dataset, { ...options, timeZone }),
     };
   }
 
@@ -629,6 +678,7 @@
     datasetFromGlobals,
     parseDatasetFromHtml,
     extractDatasetFromPage,
+    inferDisplayTimeZoneFromHtml,
     filterDatasetByPersonIds,
     partitionDatasetByAvailability,
     normalizeDataset,

@@ -232,6 +232,24 @@ function maybeWriteArtifacts() {
   return outputDir;
 }
 
+function verifyTimeZoneInference() {
+  const html = `
+    <div id="GroupTime279835200" onmouseover="ShowSlot(279835200,&quot;Monday 08:00:00 PM&quot;);"></div>
+    <script>
+      var PeopleNames = []; var PeopleIDs = []; var TimeOfSlot = []; var AvailableAtSlot = [];
+      PeopleNames[0] = "테스터"; PeopleIDs[0] = 1;
+      TimeOfSlot[0] = 279835200; AvailableAtSlot[0] = []; AvailableAtSlot[0].push(1);
+      TimeOfSlot[1] = 279836100; AvailableAtSlot[1] = []; AvailableAtSlot[1].push(1);
+      TimeOfSlot[2] = 279837000; AvailableAtSlot[2] = []; AvailableAtSlot[2].push(1);
+      TimeOfSlot[3] = 279837900; AvailableAtSlot[3] = []; AvailableAtSlot[3].push(1);
+    </script>
+  `;
+
+  assert.strictEqual(core.inferDisplayTimeZoneFromHtml(html), "UTC", "Expected timezone inference to prefer UTC for GroupTime labels");
+  const analysis = core.analyzeHtml(html, { sessionMinutes: 60, weeklySessionCount: 1, topLimit: 5 });
+  assert.strictEqual(analysis.bestPlan.sessions[0].labelShort, "11/13 (월) 20:00-21:00", "Expected inferred UTC label for regression sample");
+}
+
 function main() {
   const outputDir = maybeWriteArtifacts();
   const scenarios = fixtures.materializeAllScenarios();
@@ -255,6 +273,10 @@ function main() {
     console.log(`${scenario.id}: PASS`);
     console.log(`  ${scenario.description}`);
   });
+
+  verifyTimeZoneInference();
+  console.log("timezone-inference: PASS");
+  console.log("  GroupTime labels can force UTC when page epochs are displayed as wall-clock UTC.");
 
   if (outputDir) {
     console.log(`Fixtures written to ${outputDir}`);
