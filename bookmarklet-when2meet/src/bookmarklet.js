@@ -12,6 +12,7 @@
 
   const HOST_ID = "when2meet-multi-session-bookmarklet";
   const PANEL_TITLE = "When2Meet Multi-Session Analyzer";
+  const BOOKMARKLET_VERSION = "v2026.03.17-8";
   const Z_INDEX = "2147483647";
   let panelState = null;
 
@@ -65,6 +66,22 @@
         font-size: 12px;
         opacity: 0.78;
         margin-top: 3px;
+      }
+      .titlebar-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .version-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 9px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.18);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.03em;
       }
       .titlebar-actions {
         display: flex;
@@ -185,116 +202,146 @@
         background: #ffffff;
         border-radius: 14px;
         border: 1px solid rgba(148, 163, 184, 0.35);
-        overflow: auto;
+        overflow: hidden;
         max-height: min(54vh, 680px);
       }
-      table {
-        width: max-content;
+      .split-results {
+        display: flex;
+        align-items: stretch;
         min-width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
+        height: min(54vh, 680px);
         font-size: 12px;
       }
-      thead th {
-        position: sticky;
-        top: 0;
-        z-index: 3;
+      .session-pane {
+        flex: 0 0 504px;
+        width: 504px;
+        min-width: 504px;
+        border-right: 1px solid #cbd5e1;
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+      }
+      .people-pane {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        background: #fff;
+      }
+      .pane-header {
+        flex: 0 0 auto;
+        height: 78px;
+        min-height: 78px;
         background: #e2e8f0;
-        color: #0f172a;
+        border-bottom: 1px solid #cbd5e1;
+        overflow: hidden;
       }
-      th, td {
-        border-right: 1px solid #e2e8f0;
-        border-bottom: 1px solid #e2e8f0;
-        padding: 8px 10px;
-        text-align: center;
-        white-space: nowrap;
+      .session-header-grid,
+      .session-row-grid {
+        display: grid;
+        grid-template-columns: 168px 168px 168px;
       }
-      tbody tr:nth-child(even) {
-        background: rgba(248, 250, 252, 0.9);
+      .people-header-grid,
+      .people-row-grid {
+        display: grid;
       }
-      .sticky-col {
-        position: sticky;
-        left: 0;
-        z-index: 2;
-      }
-      .sticky-col.session-col-2 {
-        left: 168px;
-      }
-      .sticky-col.session-col-3 {
-        left: 336px;
-      }
-      thead .sticky-col {
-        z-index: 4;
-        background: #e2e8f0;
-      }
-      .session-col {
-        width: 168px;
-        min-width: 168px;
-        max-width: 168px;
-        text-align: left;
-        font-weight: 600;
-        background: #dbe4ee;
-        color: #0f172a;
-        background-clip: padding-box;
-      }
-      tbody .session-col {
-        z-index: 3;
-        background: #dbe4ee;
-        box-shadow: inset -1px 0 0 #cbd5e1;
-      }
-      tbody tr:nth-child(even) .session-col {
-        background: #cfd9e6;
-      }
-      .session-label {
+      .session-header-cell,
+      .person-header-cell {
         display: flex;
         align-items: center;
-        min-height: 36px;
-        padding: 6px 8px;
-        border-radius: 8px;
-        white-space: normal;
-        word-break: break-word;
-        line-height: 1.35;
-        font-size: 12px;
+        justify-content: center;
+        height: 78px;
+        min-height: 78px;
+        padding: 8px 6px;
+        color: #0f172a;
         font-weight: 700;
-        color: #111827;
-        background: #ffffff;
-        box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+        border-right: 1px solid #cbd5e1;
+        box-sizing: border-box;
+        background: #e2e8f0;
       }
-      .session-col-1 .session-label {
-        background: #fecaca;
+      .session-header-cell:last-child,
+      .person-header-cell:last-child {
+        border-right: 0;
       }
-      .session-col-2 .session-label {
-        background: #bbf7d0;
-      }
-      .session-col-3 .session-label {
-        background: #bfdbfe;
-      }
-      .session-empty {
-        color: #94a3b8;
-      }
-      .session-empty .session-label {
-        background: rgba(255, 255, 255, 0.55);
-        color: #94a3b8;
+      .person-header-cell {
+        min-width: 34px;
+        width: 34px;
+        align-items: flex-end;
+        padding: 6px 2px;
       }
       .person-head {
         writing-mode: vertical-rl;
         text-orientation: mixed;
-        min-width: 34px;
-        width: 34px;
         font-size: 11px;
         line-height: 1.1;
+      }
+      .pane-body {
+        flex: 1 1 auto;
+      }
+      .session-body {
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+      .people-body {
+        overflow: auto;
+      }
+      .session-row-grid,
+      .people-row-grid {
+        min-height: 42px;
+      }
+      .session-row-grid.data-row-even .session-cell,
+      .people-row-grid.data-row-even .person-cell {
+        background: rgba(248, 250, 252, 0.9);
+      }
+      .session-cell {
+        min-height: 42px;
+        padding: 6px;
+        border-right: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e2e8f0;
+        box-sizing: border-box;
+        background: #fff;
+      }
+      .session-cell:last-child {
+        border-right: 0;
+      }
+      .session-text-box {
+        display: block !important;
+        width: 100% !important;
+        min-height: 30px;
+        padding: 6px 8px;
+        border: 1px solid #111827;
+        border-radius: 6px;
+        background: #ffffff;
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+        font: 800 15px/1.4 Arial, Helvetica, sans-serif !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: anywhere;
+        opacity: 1 !important;
+        visibility: visible !important;
+        text-shadow: none !important;
+        box-sizing: border-box;
+      }
+      .session-empty .session-text-box {
+        border-color: #cbd5e1;
+        color: #94a3b8 !important;
+        -webkit-text-fill-color: #94a3b8 !important;
+        background: #f8fafc;
       }
       .person-cell {
         min-width: 34px;
         width: 34px;
-        padding: 0;
-        height: 30px;
+        min-height: 42px;
+        border-right: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e2e8f0;
+        box-sizing: border-box;
+        background: #fff;
       }
       .person-fill {
         display: block;
         width: 100%;
-        height: 100%;
-        min-height: 30px;
+        min-height: 41px;
       }
       .table-empty {
         padding: 28px;
@@ -310,14 +357,6 @@
           width: 96vw;
           max-height: 92vh;
         }
-        .sticky-col,
-        .sticky-col.session-col-2,
-        .sticky-col.session-col-3 {
-          position: static;
-        }
-        table {
-          width: 100%;
-        }
       }
     `;
   }
@@ -331,9 +370,12 @@
             <h1>${escapeHtml(PANEL_TITLE)}</h1>
             <div class="subtitle">Top 50 union-coverage plans from current page availability</div>
           </div>
-          <div class="titlebar-actions">
-            <button class="icon-button" data-action="refresh" type="button">Refresh</button>
-            <button class="icon-button" data-action="close" type="button">Close</button>
+          <div class="titlebar-meta">
+            <span class="version-badge">${escapeHtml(BOOKMARKLET_VERSION)}</span>
+            <div class="titlebar-actions">
+              <button class="icon-button" data-action="refresh" type="button">Refresh</button>
+              <button class="icon-button" data-action="close" type="button">Close</button>
+            </div>
           </div>
         </header>
         <div class="body">
@@ -351,7 +393,7 @@
               </select>
             </div>
           </section>
-          <section class="status" data-kind="info" id="status">Ready.</section>
+          <section class="status" data-kind="info" id="status">Ready. ${escapeHtml(BOOKMARKLET_VERSION)}</section>
           <section class="summary-grid" id="summary"></section>
           <section class="legend" id="legend"></section>
           <section class="table-wrap" id="resultsWrap">
@@ -515,14 +557,73 @@
     return `${startParts.month} ${startParts.day} (${startParts.weekday}) ${startParts.hour}:${startParts.minute}-${endParts.hour}:${endParts.minute}`;
   }
 
+  function createDiv(className, textContent) {
+    const element = document.createElement("div");
+    if (className) {
+      element.className = className;
+    }
+    if (typeof textContent === "string") {
+      element.textContent = textContent;
+    }
+    return element;
+  }
+
   function renderSessionCell(session, index, timeZone) {
     const englishLabel = formatEnglishSessionLabel(session, timeZone);
     const longLabel = session ? session.labelLong : "";
-    return `
-      <td class="sticky-col session-col session-col-${index + 1}${session ? "" : " session-empty"}" title="${session ? escapeHtml(longLabel) : ""}">
-        <span class="session-label">${session ? escapeHtml(englishLabel) : ""}</span>
-      </td>
-    `;
+    const cell = createDiv(`session-cell session-col-${index + 1}${session ? "" : " session-empty"}`);
+    if (longLabel) {
+      cell.title = longLabel;
+    }
+
+    const textBox = createDiv("session-text-box", englishLabel || " ");
+    textBox.style.display = "block";
+    textBox.style.width = "100%";
+    textBox.style.minHeight = "30px";
+    textBox.style.padding = "6px 8px";
+    textBox.style.border = `1px solid ${session ? "#111827" : "#cbd5e1"}`;
+    textBox.style.borderRadius = "6px";
+    textBox.style.background = session ? "#ffffff" : "#f8fafc";
+    textBox.style.color = session ? "#000000" : "#94a3b8";
+    textBox.style.webkitTextFillColor = session ? "#000000" : "#94a3b8";
+    textBox.style.fontFamily = "Arial, Helvetica, sans-serif";
+    textBox.style.fontSize = "15px";
+    textBox.style.fontWeight = "800";
+    textBox.style.lineHeight = "1.4";
+    textBox.style.whiteSpace = "normal";
+    textBox.style.wordBreak = "break-word";
+    textBox.style.overflowWrap = "anywhere";
+    textBox.style.opacity = "1";
+    textBox.style.visibility = "visible";
+    textBox.style.textShadow = "none";
+    textBox.style.boxSizing = "border-box";
+    textBox.style.position = "relative";
+    textBox.style.zIndex = "2";
+
+    cell.appendChild(textBox);
+    return cell;
+  }
+
+  function setupResultsScrollSync(state) {
+    const sessionBody = state.elements.resultsWrap.querySelector('.session-body');
+    const peopleBody = state.elements.resultsWrap.querySelector('.people-body');
+    const peopleHeaderGrid = state.elements.resultsWrap.querySelector('.people-header-grid');
+    if (!sessionBody || !peopleBody || !peopleHeaderGrid) return;
+
+    let syncing = false;
+    peopleBody.addEventListener('scroll', () => {
+      if (syncing) return;
+      syncing = true;
+      sessionBody.scrollTop = peopleBody.scrollTop;
+      peopleHeaderGrid.style.transform = `translateX(${-peopleBody.scrollLeft}px)`;
+      syncing = false;
+    });
+    sessionBody.addEventListener('scroll', () => {
+      if (syncing) return;
+      syncing = true;
+      peopleBody.scrollTop = sessionBody.scrollTop;
+      syncing = false;
+    });
   }
 
   function renderSummary(state, extraction, analysis) {
@@ -572,40 +673,69 @@
   }
 
   function renderResults(state, analysis) {
-    const peopleHead = analysis.dataset.people
-      .map((person) => `<th class="person-head" title="${escapeHtml(person.name)}">${escapeHtml(person.name)}</th>`)
-      .join("");
+    const peopleGridTemplate = `repeat(${analysis.dataset.people.length}, 34px)`;
 
-    const rows = analysis.plans
-      .map((plan) => {
-        const row = core.planToTableRow(plan, analysis.dataset);
-        const sessionCells = Array.from({ length: 3 }, (_, index) => renderSessionCell(plan.sessions[index], index, analysis.config.timeZone)).join("");
-        const personCells = row.personCells
-          .map(
-            (cell) => `
-              <td class="person-cell" title="${escapeHtml(cell.personName)}: ${escapeHtml(cell.label)}">
-                <span class="person-fill" style="background:${escapeHtml(cell.color)}"></span>
-              </td>
-            `
-          )
-          .join("");
-        return `<tr>${sessionCells}${personCells}</tr>`;
-      })
-      .join("");
+    const splitResults = createDiv("split-results");
+    const sessionPane = document.createElement("section");
+    sessionPane.className = "session-pane";
+    const peoplePane = document.createElement("section");
+    peoplePane.className = "people-pane";
 
-    state.elements.resultsWrap.innerHTML = `
-      <table>
-        <thead>
-          <tr>
-            <th class="sticky-col session-col session-col-1">Session 1</th>
-            <th class="sticky-col session-col session-col-2">Session 2</th>
-            <th class="sticky-col session-col session-col-3">Session 3</th>
-            ${peopleHead}
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
-    `;
+    const sessionHeader = createDiv("pane-header");
+    const sessionHeaderGrid = createDiv("session-header-grid");
+    ["Session 1", "Session 2", "Session 3"].forEach((label) => {
+      sessionHeaderGrid.appendChild(createDiv("session-header-cell", label));
+    });
+    sessionHeader.appendChild(sessionHeaderGrid);
+
+    const sessionBody = createDiv("pane-body session-body");
+    analysis.plans.forEach((plan, rowIndex) => {
+      const rowNode = createDiv(`session-row-grid ${rowIndex % 2 === 1 ? "data-row-even" : "data-row-odd"}`);
+      for (let index = 0; index < 3; index += 1) {
+        rowNode.appendChild(renderSessionCell(plan.sessions[index], index, analysis.config.timeZone));
+      }
+      sessionBody.appendChild(rowNode);
+    });
+
+    sessionPane.appendChild(sessionHeader);
+    sessionPane.appendChild(sessionBody);
+
+    const peopleHeaderViewport = createDiv("pane-header people-header-viewport");
+    const peopleHeaderGrid = createDiv("people-header-grid");
+    peopleHeaderGrid.style.gridTemplateColumns = peopleGridTemplate;
+    analysis.dataset.people.forEach((person) => {
+      const headCell = createDiv("person-header-cell");
+      headCell.title = person.name;
+      const headText = createDiv("person-head", person.name);
+      headCell.appendChild(headText);
+      peopleHeaderGrid.appendChild(headCell);
+    });
+    peopleHeaderViewport.appendChild(peopleHeaderGrid);
+
+    const peopleBody = createDiv("pane-body people-body");
+    analysis.plans.forEach((plan, rowIndex) => {
+      const row = core.planToTableRow(plan, analysis.dataset);
+      const rowNode = createDiv(`people-row-grid ${rowIndex % 2 === 1 ? "data-row-even" : "data-row-odd"}`);
+      rowNode.style.gridTemplateColumns = peopleGridTemplate;
+      row.personCells.forEach((cell) => {
+        const personCell = createDiv("person-cell");
+        personCell.title = `${cell.personName}: ${cell.label}`;
+        const fill = createDiv("person-fill");
+        fill.style.background = cell.color;
+        personCell.appendChild(fill);
+        rowNode.appendChild(personCell);
+      });
+      peopleBody.appendChild(rowNode);
+    });
+
+    peoplePane.appendChild(peopleHeaderViewport);
+    peoplePane.appendChild(peopleBody);
+
+    splitResults.appendChild(sessionPane);
+    splitResults.appendChild(peoplePane);
+
+    state.elements.resultsWrap.replaceChildren(splitResults);
+    setupResultsScrollSync(state);
   }
 
   function renderError(state, error) {
