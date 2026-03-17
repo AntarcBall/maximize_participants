@@ -14,6 +14,7 @@
   const PANEL_TITLE = "When2Meet Multi-Session Analyzer";
   const BOOKMARKLET_VERSION = "v2026.03.17-9";
   const Z_INDEX = "2147483647";
+  const BINARY_COVERED_COLOR = "#2563eb";
   let panelState = null;
 
   function escapeHtml(value) {
@@ -38,6 +39,7 @@
         max-height: min(88vh, 980px);
         display: flex;
         flex-direction: column;
+        position: relative;
         color: #111827;
         font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         background: #ffffff;
@@ -45,6 +47,14 @@
         border-radius: 16px;
         box-shadow: 0 28px 60px rgba(15, 23, 42, 0.28);
         overflow: hidden;
+      }
+      .panel.is-resizing {
+        user-select: none;
+        cursor: ns-resize;
+      }
+      .panel.is-resizing-width {
+        user-select: none;
+        cursor: ew-resize;
       }
       .titlebar {
         display: flex;
@@ -109,6 +119,19 @@
         background: #f8fafc;
         overflow: hidden;
       }
+      .top-layout {
+        display: flex;
+        gap: 14px;
+        align-items: stretch;
+        min-height: 0;
+      }
+      .top-stack {
+        flex: 1 1 0;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
       .controls {
         display: flex;
         flex-wrap: wrap;
@@ -136,6 +159,25 @@
         font-size: 13px;
         font-weight: 600;
       }
+      .field-checkbox {
+        min-width: 220px;
+      }
+      .checkbox-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 42px;
+        padding: 0 2px;
+        color: #0f172a;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .checkbox-row input {
+        width: 16px;
+        height: 16px;
+        accent-color: #2563eb;
+        cursor: pointer;
+      }
       .status {
         border-radius: 12px;
         padding: 10px 12px;
@@ -143,6 +185,35 @@
         color: #0f172a;
         font-size: 12px;
         line-height: 1.45;
+      }
+      .ignored-wrap {
+        display: none;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 10px;
+        border: 1px solid rgba(251, 191, 36, 0.45);
+        border-radius: 12px;
+        background: #fffbeb;
+      }
+      .ignored-wrap[data-visible="true"] {
+        display: flex;
+      }
+      .ignored-title {
+        color: #92400e;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+      }
+      .ignored-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: rgba(245, 158, 11, 0.12);
+        color: #92400e;
+        font-size: 11px;
+        font-weight: 700;
       }
       .status[data-kind="error"] {
         background: #fee2e2;
@@ -161,19 +232,21 @@
         background: #ffffff;
         border: 1px solid rgba(148, 163, 184, 0.35);
         border-radius: 12px;
-        padding: 12px;
+        padding: 6px 10px;
       }
       .summary-card .label {
-        font-size: 11px;
+        font-size: 10px;
         color: #475569;
         text-transform: uppercase;
         letter-spacing: 0.05em;
+        line-height: 1.1;
       }
       .summary-card .value {
-        margin-top: 4px;
-        font-size: 20px;
+        margin-top: 2px;
+        font-size: 13px;
         font-weight: 800;
         color: #0f172a;
+        line-height: 1.1;
       }
       .legend {
         display: flex;
@@ -181,6 +254,8 @@
         gap: 8px;
       }
       .preview-wrap {
+        flex: 1 1 0;
+        min-width: 0;
         background: #ffffff;
         border: 1px solid rgba(148, 163, 184, 0.35);
         border-radius: 14px;
@@ -266,6 +341,41 @@
         font-size: 11px;
         color: #334155;
       }
+      .context-menu {
+        position: fixed;
+        min-width: 180px;
+        padding: 6px;
+        border: 1px solid rgba(148, 163, 184, 0.45);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.98);
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.22);
+        z-index: 2147483647;
+      }
+      .context-menu[hidden] {
+        display: none;
+      }
+      .context-menu button {
+        width: 100%;
+        appearance: none;
+        border: 0;
+        background: transparent;
+        color: #0f172a;
+        text-align: left;
+        padding: 10px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .context-menu button:hover {
+        background: #eff6ff;
+      }
+      .context-menu-title {
+        padding: 4px 8px 8px;
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 700;
+      }
       .swatch {
         width: 14px;
         height: 14px;
@@ -274,17 +384,18 @@
         flex: 0 0 auto;
       }
       .table-wrap {
+        flex: 1 1 auto;
+        min-height: 240px;
         background: #ffffff;
         border-radius: 14px;
         border: 1px solid rgba(148, 163, 184, 0.35);
         overflow: hidden;
-        max-height: min(54vh, 680px);
       }
       .split-results {
         display: flex;
         align-items: stretch;
         min-width: 100%;
-        height: min(54vh, 680px);
+        height: 100%;
         font-size: 12px;
       }
       .session-pane {
@@ -344,6 +455,10 @@
         align-items: flex-end;
         padding: 6px 2px;
       }
+      .person-header-cell.is-important {
+        background: #dbeafe;
+        box-shadow: inset 0 0 0 3px #2563eb;
+      }
       .person-head {
         writing-mode: vertical-rl;
         text-orientation: mixed;
@@ -362,7 +477,7 @@
       }
       .session-row-grid,
       .people-row-grid {
-        min-height: 42px;
+        min-height: 36px;
       }
       .session-row-grid.is-selected .session-cell,
       .people-row-grid.is-selected .person-cell {
@@ -373,8 +488,8 @@
         background: rgba(248, 250, 252, 0.9);
       }
       .session-cell {
-        min-height: 42px;
-        padding: 6px;
+        min-height: 36px;
+        padding: 4px;
         border-right: 1px solid #e2e8f0;
         border-bottom: 1px solid #e2e8f0;
         box-sizing: border-box;
@@ -386,17 +501,17 @@
       .session-text-box {
         display: block !important;
         width: 100% !important;
-        min-height: 30px;
-        padding: 6px 8px;
+        min-height: 26px;
+        padding: 4px 8px;
         border: 1px solid #111827;
         border-radius: 6px;
         background: #ffffff;
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
-        font: 800 15px/1.4 Arial, Helvetica, sans-serif !important;
-        white-space: normal !important;
-        word-break: break-word !important;
-        overflow-wrap: anywhere;
+        font: 800 12px/1.1 Arial, Helvetica, sans-serif !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
         opacity: 1 !important;
         visibility: visible !important;
         text-shadow: none !important;
@@ -411,7 +526,7 @@
       .person-cell {
         min-width: 34px;
         width: 34px;
-        min-height: 42px;
+        min-height: 36px;
         border-right: 1px solid #e2e8f0;
         border-bottom: 1px solid #e2e8f0;
         box-sizing: border-box;
@@ -420,7 +535,7 @@
       .person-fill {
         display: block;
         width: 100%;
-        min-height: 41px;
+        min-height: 35px;
       }
       .table-empty {
         padding: 28px;
@@ -431,10 +546,50 @@
         font-size: 11px;
         color: #64748b;
       }
+      .resize-handle {
+        flex: 0 0 auto;
+        position: relative;
+        height: 18px;
+        cursor: ns-resize;
+        background: linear-gradient(180deg, rgba(226, 232, 240, 0), rgba(226, 232, 240, 0.85));
+      }
+      .resize-handle::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        bottom: 5px;
+        transform: translateX(-50%);
+        width: 72px;
+        height: 4px;
+        border-radius: 999px;
+        background: rgba(100, 116, 139, 0.75);
+      }
+      .resize-handle-right {
+        position: absolute;
+        top: 14px;
+        right: 0;
+        bottom: 18px;
+        width: 16px;
+        cursor: ew-resize;
+      }
+      .resize-handle-right::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        right: 4px;
+        transform: translateY(-50%);
+        width: 4px;
+        height: 72px;
+        border-radius: 999px;
+        background: rgba(100, 116, 139, 0.6);
+      }
       @media (max-width: 960px) {
         .panel {
           width: 96vw;
           max-height: 92vh;
+        }
+        .top-layout {
+          flex-direction: column;
         }
       }
     `;
@@ -458,45 +613,81 @@
           </div>
         </header>
         <div class="body">
-          <section class="controls">
-            <div class="field">
-              <label for="sessionLength">Session Length</label>
-              <select id="sessionLength">
-                ${core.SESSION_LENGTH_OPTIONS.map((minutes) => `<option value="${minutes}" ${minutes === 60 ? "selected" : ""}>${minutes} minutes</option>`).join("")}
-              </select>
+          <section class="top-layout">
+            <div class="top-stack">
+              <section class="controls">
+                <div class="field">
+                  <label for="sessionLength">Session Length</label>
+                  <select id="sessionLength">
+                    ${core.SESSION_LENGTH_OPTIONS.map((minutes) => `<option value="${minutes}" ${minutes === 60 ? "selected" : ""}>${minutes} minutes</option>`).join("")}
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="weeklyCount">Weekly Session Count</label>
+                  <select id="weeklyCount">
+                    ${core.WEEKLY_SESSION_COUNT_OPTIONS.map((count) => `<option value="${count}" ${count === 2 ? "selected" : ""}>${count}</option>`).join("")}
+                  </select>
+                </div>
+                <div class="field field-checkbox">
+                  <label for="binaryDisplay">Display Mode</label>
+                  <label class="checkbox-row" for="binaryDisplay">
+                    <input id="binaryDisplay" type="checkbox">
+                    <span>Binary covered / uncovered</span>
+                  </label>
+                </div>
+                <div class="field field-checkbox">
+                  <label for="requiredOnly">필수인원</label>
+                  <label class="checkbox-row" for="requiredOnly">
+                    <input id="requiredOnly" type="checkbox">
+                    <span>필수인원만 보기</span>
+                  </label>
+                </div>
+              </section>
+              <section class="ignored-wrap" data-visible="false" id="ignoredWrap"></section>
+              <section class="status" data-kind="info" id="status">Ready. ${escapeHtml(BOOKMARKLET_VERSION)}</section>
+              <section class="summary-grid" id="summary"></section>
+              <section class="legend" id="legend"></section>
             </div>
-            <div class="field">
-              <label for="weeklyCount">Weekly Session Count</label>
-              <select id="weeklyCount">
-                ${core.WEEKLY_SESSION_COUNT_OPTIONS.map((count) => `<option value="${count}" ${count === 2 ? "selected" : ""}>${count}</option>`).join("")}
-              </select>
-            </div>
+            <section class="preview-wrap" id="previewWrap"></section>
           </section>
-          <section class="status" data-kind="info" id="status">Ready. ${escapeHtml(BOOKMARKLET_VERSION)}</section>
-          <section class="summary-grid" id="summary"></section>
-          <section class="legend" id="legend"></section>
-          <section class="preview-wrap" id="previewWrap"></section>
           <section class="table-wrap" id="resultsWrap">
             <div class="table-empty">Run the analyzer to see ranked plans.</div>
           </section>
-          <div class="footer-note">Colors encode person coverage across Session 1/2/3 using additive RGB mixing. Uncovered people stay dark gray.</div>
+          <div class="footer-note" id="footerNote">Colors encode person coverage across Session 1/2/3 using additive RGB mixing. Uncovered people stay dark gray.</div>
         </div>
+        <div class="resize-handle" data-resize-handle="true" title="Drag to resize"></div>
+        <div class="resize-handle-right" data-resize-handle-right="true" title="Drag to resize width"></div>
       </section>
+      <div class="context-menu" id="contextMenu" hidden>
+        <div class="context-menu-title" id="contextMenuTitle"></div>
+        <button type="button" data-action="toggle-important" id="toggleImportantButton">중요 인원으로 표시</button>
+        <button type="button" data-action="exclude-person">Delete This Column And Recalculate</button>
+      </div>
     `;
   }
 
   function getElements(shadowRoot) {
     return {
+      panel: shadowRoot.querySelector(".panel"),
       sessionLength: shadowRoot.getElementById("sessionLength"),
       weeklyCount: shadowRoot.getElementById("weeklyCount"),
+      binaryDisplay: shadowRoot.getElementById("binaryDisplay"),
+      requiredOnly: shadowRoot.getElementById("requiredOnly"),
       status: shadowRoot.getElementById("status"),
       summary: shadowRoot.getElementById("summary"),
+      ignoredWrap: shadowRoot.getElementById("ignoredWrap"),
       legend: shadowRoot.getElementById("legend"),
       previewWrap: shadowRoot.getElementById("previewWrap"),
       resultsWrap: shadowRoot.getElementById("resultsWrap"),
+      footerNote: shadowRoot.getElementById("footerNote"),
+      contextMenu: shadowRoot.getElementById("contextMenu"),
+      contextMenuTitle: shadowRoot.getElementById("contextMenuTitle"),
+      toggleImportantButton: shadowRoot.getElementById("toggleImportantButton"),
       closeButton: shadowRoot.querySelector('[data-action="close"]'),
       refreshButton: shadowRoot.querySelector('[data-action="refresh"]'),
       titlebar: shadowRoot.querySelector(".titlebar"),
+      resizeHandle: shadowRoot.querySelector('[data-resize-handle="true"]'),
+      resizeHandleRight: shadowRoot.querySelector('[data-resize-handle-right="true"]'),
     };
   }
 
@@ -526,6 +717,14 @@
       shadowRoot,
       elements,
       dragState: null,
+      resizeState: null,
+      defaultPanelHeight: null,
+      defaultPanelWidth: null,
+      excludedPersonIds: new Set(),
+      importantPersonIds: new Set(),
+      contextMenuPersonId: null,
+      lastExtraction: null,
+      lastIgnoredPeople: [],
       lastAnalysis: null,
     };
     bindEvents(panelState);
@@ -544,6 +743,14 @@
         shadowRoot: existing.shadowRoot,
         elements: getElements(existing.shadowRoot),
         dragState: null,
+        resizeState: null,
+        defaultPanelHeight: null,
+        defaultPanelWidth: null,
+        excludedPersonIds: new Set(),
+        importantPersonIds: new Set(),
+        contextMenuPersonId: null,
+        lastExtraction: null,
+        lastIgnoredPeople: [],
         lastAnalysis: null,
       };
       bindEvents(panelState);
@@ -559,9 +766,50 @@
     elements.status.dataset.bound = "true";
 
     const rerun = () => analyzeAndRender(state);
+    const rerenderDisplay = () => {
+      hideContextMenu(state);
+      renderIgnoredPeople(state, state.lastIgnoredPeople || []);
+      renderLegend(state);
+      if (state.lastAnalysis) {
+        if (state.lastExtraction) {
+          renderSummary(state, state.lastExtraction, getVisibleAnalysis(state, state.lastAnalysis));
+        }
+        renderResults(state, state.lastAnalysis);
+      }
+    };
     elements.sessionLength.addEventListener("change", rerun);
     elements.weeklyCount.addEventListener("change", rerun);
+    elements.binaryDisplay.addEventListener("change", rerenderDisplay);
+    elements.requiredOnly.addEventListener("change", rerenderDisplay);
     elements.refreshButton.addEventListener("click", rerun);
+    elements.contextMenu.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-action]");
+      if (!button) return;
+      const personId = state.contextMenuPersonId;
+      hideContextMenu(state);
+      if (typeof personId !== "number") return;
+      if (button.dataset.action === "toggle-important") {
+        if (state.importantPersonIds.has(personId)) {
+          state.importantPersonIds.delete(personId);
+        } else {
+          state.importantPersonIds.add(personId);
+        }
+        if (state.lastAnalysis) {
+          renderResults(state, state.lastAnalysis);
+        }
+        return;
+      }
+      if (button.dataset.action === "exclude-person") {
+        state.excludedPersonIds.add(personId);
+        state.importantPersonIds.delete(personId);
+        analyzeAndRender(state);
+      }
+    });
+    state.shadowRoot.addEventListener("click", (event) => {
+      if (!event.target.closest("#contextMenu") && !event.target.closest(".person-header-cell")) {
+        hideContextMenu(state);
+      }
+    });
     elements.closeButton.addEventListener("click", () => {
       state.host.remove();
       panelState = null;
@@ -596,6 +844,167 @@
       window.addEventListener("mousemove", onMove);
       window.addEventListener("mouseup", onUp);
     });
+
+    elements.resizeHandle.addEventListener("mousedown", (event) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      focusPanel(state);
+
+      const panelRect = elements.panel.getBoundingClientRect();
+      if (!state.defaultPanelHeight) {
+        state.defaultPanelHeight = panelRect.height;
+      }
+      state.resizeState = {
+        startY: event.clientY,
+        startHeight: panelRect.height,
+      };
+
+      elements.panel.classList.add("is-resizing");
+      elements.panel.style.height = `${panelRect.height}px`;
+
+      const onMove = (moveEvent) => {
+        if (!state.resizeState) return;
+        const viewportPadding = 8;
+        const minHeight = 420;
+        const maxHeightByDefault = Math.max(minHeight, state.defaultPanelHeight * 2);
+        const maxHeightByViewport = Math.max(minHeight, window.innerHeight - panelRect.top - viewportPadding);
+        const availableHeight = Math.min(maxHeightByDefault, maxHeightByViewport);
+        const nextHeight = state.resizeState.startHeight + (moveEvent.clientY - state.resizeState.startY);
+        const clampedHeight = Math.max(minHeight, Math.min(availableHeight, nextHeight));
+        elements.panel.style.height = `${clampedHeight}px`;
+      };
+
+      const onUp = () => {
+        state.resizeState = null;
+        elements.panel.classList.remove("is-resizing");
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+      };
+
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    });
+
+    elements.resizeHandleRight.addEventListener("mousedown", (event) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      focusPanel(state);
+
+      const panelRect = elements.panel.getBoundingClientRect();
+      if (!state.defaultPanelWidth) {
+        state.defaultPanelWidth = panelRect.width;
+      }
+      state.resizeState = {
+        startX: event.clientX,
+        startWidth: panelRect.width,
+      };
+
+      elements.panel.classList.add("is-resizing-width");
+      elements.panel.style.width = `${panelRect.width}px`;
+
+      const onMove = (moveEvent) => {
+        if (!state.resizeState) return;
+        const viewportPadding = 8;
+        const minWidth = 720;
+        const maxWidthByDefault = Math.max(minWidth, state.defaultPanelWidth * 2);
+        const maxWidthByViewport = Math.max(minWidth, window.innerWidth - panelRect.left - viewportPadding);
+        const availableWidth = Math.min(maxWidthByDefault, maxWidthByViewport);
+        const nextWidth = state.resizeState.startWidth + (moveEvent.clientX - state.resizeState.startX);
+        const clampedWidth = Math.max(minWidth, Math.min(availableWidth, nextWidth));
+        elements.panel.style.width = `${clampedWidth}px`;
+      };
+
+      const onUp = () => {
+        state.resizeState = null;
+        elements.panel.classList.remove("is-resizing-width");
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+      };
+
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    });
+  }
+
+  function isBinaryDisplayEnabled(state) {
+    return Boolean(state && state.elements && state.elements.binaryDisplay && state.elements.binaryDisplay.checked);
+  }
+
+  function isRequiredOnlyEnabled(state) {
+    return Boolean(state && state.elements && state.elements.requiredOnly && state.elements.requiredOnly.checked);
+  }
+
+  function hideContextMenu(state) {
+    state.contextMenuPersonId = null;
+    state.elements.contextMenu.hidden = true;
+  }
+
+  function showContextMenu(state, person, event) {
+    const { contextMenu, contextMenuTitle, toggleImportantButton } = state.elements;
+    state.contextMenuPersonId = person.id;
+    contextMenuTitle.textContent = person.name;
+    toggleImportantButton.textContent = state.importantPersonIds.has(person.id) ? "중요 인원 해제" : "중요 인원으로 표시";
+    contextMenu.hidden = false;
+
+    const viewportPadding = 8;
+    const maxLeft = Math.max(viewportPadding, window.innerWidth - contextMenu.offsetWidth - viewportPadding);
+    const maxTop = Math.max(viewportPadding, window.innerHeight - contextMenu.offsetHeight - viewportPadding);
+    contextMenu.style.left = `${Math.min(event.clientX, maxLeft)}px`;
+    contextMenu.style.top = `${Math.min(event.clientY, maxTop)}px`;
+  }
+
+  function renderIgnoredPeople(state, ignoredPeople) {
+    const people = ignoredPeople || [];
+    state.elements.ignoredWrap.dataset.visible = people.length ? "true" : "false";
+    if (!people.length) {
+      state.elements.ignoredWrap.replaceChildren();
+      return;
+    }
+
+    state.elements.ignoredWrap.innerHTML = `
+      <span class="ignored-title">무시된 목록</span>
+      ${people.map((person) => `<span class="ignored-chip">${escapeHtml(person.name)}</span>`).join("")}
+    `;
+  }
+
+  function colorForDisplayMask(mask, state) {
+    if (isBinaryDisplayEnabled(state)) {
+      return mask ? BINARY_COVERED_COLOR : core.EMPTY_CELL_COLOR;
+    }
+    return core.colorForMembershipMask(mask);
+  }
+
+  function getDisplayedPeople(state, dataset) {
+    const regularPeople = [];
+    const importantPeople = [];
+    dataset.people.forEach((person) => {
+      if (state.importantPersonIds.has(person.id)) {
+        importantPeople.push(person);
+      } else {
+        regularPeople.push(person);
+      }
+    });
+    return regularPeople.concat(importantPeople);
+  }
+
+  function getVisibleAnalysis(state, analysis) {
+    const visiblePlans = isRequiredOnlyEnabled(state)
+      ? core.filterPlansByRequiredPersonIds(analysis.plans, analysis.dataset, state.importantPersonIds)
+      : analysis.plans;
+
+    return {
+      ...analysis,
+      plans: visiblePlans,
+      displayedRowCount: visiblePlans.length,
+      bestPlan: visiblePlans[0] || null,
+    };
+  }
+
+  function labelForDisplayMask(mask, state) {
+    if (isBinaryDisplayEnabled(state)) {
+      return mask ? "Covered" : "Not covered";
+    }
+    return core.membershipText(mask);
   }
 
   function setStatus(state, message, kind) {
@@ -660,20 +1069,20 @@
     const textBox = createDiv("session-text-box", englishLabel || " ");
     textBox.style.display = "block";
     textBox.style.width = "100%";
-    textBox.style.minHeight = "30px";
-    textBox.style.padding = "6px 8px";
+    textBox.style.minHeight = "26px";
+    textBox.style.padding = "4px 8px";
     textBox.style.border = `1px solid ${session ? "#111827" : "#cbd5e1"}`;
     textBox.style.borderRadius = "6px";
     textBox.style.background = session ? "#ffffff" : "#f8fafc";
     textBox.style.color = session ? "#000000" : "#94a3b8";
     textBox.style.webkitTextFillColor = session ? "#000000" : "#94a3b8";
     textBox.style.fontFamily = "Arial, Helvetica, sans-serif";
-    textBox.style.fontSize = "15px";
+    textBox.style.fontSize = "12px";
     textBox.style.fontWeight = "800";
-    textBox.style.lineHeight = "1.4";
-    textBox.style.whiteSpace = "normal";
-    textBox.style.wordBreak = "break-word";
-    textBox.style.overflowWrap = "anywhere";
+    textBox.style.lineHeight = "1.1";
+    textBox.style.whiteSpace = "nowrap";
+    textBox.style.overflow = "hidden";
+    textBox.style.textOverflow = "ellipsis";
     textBox.style.opacity = "1";
     textBox.style.visibility = "visible";
     textBox.style.textShadow = "none";
@@ -783,7 +1192,7 @@
 
     const gridWrap = createDiv('preview-grid-wrap');
     const grid = createDiv('preview-grid');
-    grid.style.gridTemplateColumns = `88px repeat(${days.length}, minmax(120px, 1fr))`;
+    grid.style.gridTemplateColumns = `44px repeat(${days.length}, minmax(60px, 1fr))`;
 
     grid.appendChild(createDiv('preview-cell preview-corner', 'Time'));
     days.forEach((day) => {
@@ -796,10 +1205,12 @@
         const cellKey = `${day.key}|${time}`;
         const membership = membershipByCell.get(cellKey) || 0;
         const cell = createDiv(`preview-cell preview-slot${membership ? ' active' : ''}`);
-        cell.style.background = colorForPreviewMask(membership);
+        cell.style.background = colorForDisplayMask(membership, state);
         if (membership) {
-          cell.title = core.membershipText(membership);
-          cell.appendChild(createDiv('preview-slot-label', core.membershipText(membership)));
+          const detailedMembership = core.membershipText(membership);
+          const displayLabel = labelForDisplayMask(membership, state);
+          cell.title = isBinaryDisplayEnabled(state) ? `${displayLabel} (${detailedMembership})` : detailedMembership;
+          cell.appendChild(createDiv('preview-slot-label', displayLabel));
         }
         grid.appendChild(cell);
       });
@@ -811,13 +1222,18 @@
   }
 
   function renderSummary(state, extraction, analysis) {
+    const extractionLabel = extraction.source === "window"
+      ? "window globals"
+      : extraction.source === "html"
+        ? "DOM fallback"
+        : extraction.source;
     const cards = [
-      ["Extraction", extraction.source === "window" ? "window globals" : "DOM fallback"],
+      ["Extraction", extractionLabel],
       ["People", analysis.dataset.people.length],
       ["Sessions", analysis.sessions.length],
       ["Combinations", analysis.combinationsEvaluated],
       ["Rows", analysis.displayedRowCount],
-      ["Best union", analysis.bestPlan.unionCount],
+      ["Best union", analysis.bestPlan ? analysis.bestPlan.unionCount : "-"],
     ];
 
     state.elements.summary.innerHTML = cards
@@ -833,16 +1249,21 @@
   }
 
   function renderLegend(state) {
-    const items = [
-      [core.EMPTY_CELL_COLOR, "Not covered"],
-      [core.colorForMembershipMask(1), "Session 1"],
-      [core.colorForMembershipMask(2), "Session 2"],
-      [core.colorForMembershipMask(4), "Session 3"],
-      [core.colorForMembershipMask(3), "1 + 2"],
-      [core.colorForMembershipMask(5), "1 + 3"],
-      [core.colorForMembershipMask(6), "2 + 3"],
-      [core.colorForMembershipMask(7), "1 + 2 + 3"],
-    ];
+    const items = isBinaryDisplayEnabled(state)
+      ? [
+          [BINARY_COVERED_COLOR, "Covered by at least one session"],
+          [core.EMPTY_CELL_COLOR, "Not covered"],
+        ]
+      : [
+          [core.EMPTY_CELL_COLOR, "Not covered"],
+          [core.colorForMembershipMask(1), "Session 1"],
+          [core.colorForMembershipMask(2), "Session 2"],
+          [core.colorForMembershipMask(4), "Session 3"],
+          [core.colorForMembershipMask(3), "1 + 2"],
+          [core.colorForMembershipMask(5), "1 + 3"],
+          [core.colorForMembershipMask(6), "2 + 3"],
+          [core.colorForMembershipMask(7), "1 + 2 + 3"],
+        ];
 
     state.elements.legend.innerHTML = items
       .map(
@@ -854,10 +1275,16 @@
         `
       )
       .join("");
+    state.elements.footerNote.textContent = isBinaryDisplayEnabled(state)
+      ? "Binary display highlights whether each person or slot is covered by at least one selected session."
+      : "Colors encode person coverage across Session 1/2/3 using additive RGB mixing. Uncovered people stay dark gray.";
   }
 
   function renderResults(state, analysis) {
-    const peopleGridTemplate = `repeat(${analysis.dataset.people.length}, 34px)`;
+    const visibleAnalysis = getVisibleAnalysis(state, analysis);
+    const displayedPeople = getDisplayedPeople(state, visibleAnalysis.dataset);
+    const peopleGridTemplate = displayedPeople.length ? `repeat(${displayedPeople.length}, 34px)` : "1fr";
+    const selectedPlanIndex = Math.min(state.selectedPlanIndex || 0, Math.max(visibleAnalysis.plans.length - 1, 0));
 
     const splitResults = createDiv("split-results");
     const sessionPane = document.createElement("section");
@@ -873,14 +1300,17 @@
     sessionHeader.appendChild(sessionHeaderGrid);
 
     const sessionBody = createDiv("pane-body session-body");
-    analysis.plans.forEach((plan, rowIndex) => {
-      const rowNode = createDiv(`session-row-grid ${rowIndex % 2 === 1 ? "data-row-even" : "data-row-odd"}${rowIndex === 0 ? " is-selected" : ""}`);
+    if (!visibleAnalysis.plans.length) {
+      sessionBody.appendChild(createDiv("table-empty", "No rows match the required-person filter."));
+    }
+    visibleAnalysis.plans.forEach((plan, rowIndex) => {
+      const rowNode = createDiv(`session-row-grid ${rowIndex % 2 === 1 ? "data-row-even" : "data-row-odd"}${rowIndex === selectedPlanIndex ? " is-selected" : ""}`);
       rowNode.dataset.planIndex = String(rowIndex);
       rowNode.style.cursor = 'pointer';
       for (let index = 0; index < 3; index += 1) {
-        rowNode.appendChild(renderSessionCell(plan.sessions[index], index, analysis.config.timeZone));
+        rowNode.appendChild(renderSessionCell(plan.sessions[index], index, visibleAnalysis.config.timeZone));
       }
-      rowNode.addEventListener('click', () => selectPlan(state, analysis, rowIndex));
+      rowNode.addEventListener('click', () => selectPlan(state, visibleAnalysis, rowIndex));
       sessionBody.appendChild(rowNode);
     });
 
@@ -890,31 +1320,48 @@
     const peopleHeaderViewport = createDiv("pane-header people-header-viewport");
     const peopleHeaderGrid = createDiv("people-header-grid");
     peopleHeaderGrid.style.gridTemplateColumns = peopleGridTemplate;
-    analysis.dataset.people.forEach((person) => {
+    displayedPeople.forEach((person) => {
       const headCell = createDiv("person-header-cell");
-      headCell.title = person.name;
+      headCell.title = `${person.name} (right-click to manage)`;
+      headCell.dataset.personId = String(person.id);
+      if (state.importantPersonIds.has(person.id)) {
+        headCell.classList.add("is-important");
+      }
       const headText = createDiv("person-head", person.name);
       headCell.appendChild(headText);
+      headCell.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+        showContextMenu(state, person, event);
+      });
       peopleHeaderGrid.appendChild(headCell);
     });
     peopleHeaderViewport.appendChild(peopleHeaderGrid);
 
     const peopleBody = createDiv("pane-body people-body");
-    analysis.plans.forEach((plan, rowIndex) => {
-      const row = core.planToTableRow(plan, analysis.dataset);
-      const rowNode = createDiv(`people-row-grid ${rowIndex % 2 === 1 ? "data-row-even" : "data-row-odd"}${rowIndex === 0 ? " is-selected" : ""}`);
+    if (!visibleAnalysis.plans.length) {
+      peopleBody.appendChild(createDiv("table-empty", "No rows match the required-person filter."));
+    }
+    visibleAnalysis.plans.forEach((plan, rowIndex) => {
+      const row = core.planToTableRow(plan, visibleAnalysis.dataset);
+      const cellsByPersonId = new Map(row.personCells.map((cell) => [cell.personId, cell]));
+      const rowNode = createDiv(`people-row-grid ${rowIndex % 2 === 1 ? "data-row-even" : "data-row-odd"}${rowIndex === selectedPlanIndex ? " is-selected" : ""}`);
       rowNode.dataset.planIndex = String(rowIndex);
       rowNode.style.gridTemplateColumns = peopleGridTemplate;
       rowNode.style.cursor = 'pointer';
-      row.personCells.forEach((cell) => {
+      displayedPeople.forEach((person) => {
+        const cell = cellsByPersonId.get(person.id);
+        if (!cell) return;
         const personCell = createDiv("person-cell");
-        personCell.title = `${cell.personName}: ${cell.label}`;
+        const displayLabel = labelForDisplayMask(cell.mask, state);
+        personCell.title = isBinaryDisplayEnabled(state)
+          ? `${cell.personName}: ${displayLabel} (${cell.label})`
+          : `${cell.personName}: ${cell.label}`;
         const fill = createDiv("person-fill");
-        fill.style.background = cell.color;
+        fill.style.background = colorForDisplayMask(cell.mask, state);
         personCell.appendChild(fill);
         rowNode.appendChild(personCell);
       });
-      rowNode.addEventListener('click', () => selectPlan(state, analysis, rowIndex));
+      rowNode.addEventListener('click', () => selectPlan(state, visibleAnalysis, rowIndex));
       peopleBody.appendChild(rowNode);
     });
 
@@ -926,7 +1373,7 @@
 
     state.elements.resultsWrap.replaceChildren(splitResults);
     setupResultsScrollSync(state);
-    selectPlan(state, analysis, 0);
+    selectPlan(state, visibleAnalysis, selectedPlanIndex);
   }
 
   function selectPlan(state, analysis, planIndex) {
@@ -949,17 +1396,26 @@
   }
 
   function analyzeAndRender(state) {
+    hideContextMenu(state);
     setStatus(state, "Analyzing current page availability…", "info");
 
     try {
       const extraction = core.extractDatasetFromPage(window, document);
-      const analysis = core.analyzeDataset(extraction.dataset, getConfig(state));
+      const availabilityPartition = core.partitionDatasetByAvailability(extraction.dataset);
+      state.lastIgnoredPeople = availabilityPartition.ignoredPeople;
+      renderIgnoredPeople(state, state.lastIgnoredPeople);
+      const filteredDataset = core.filterDatasetByPersonIds(availabilityPartition.dataset, state.excludedPersonIds);
+      const analysis = core.analyzeDataset(filteredDataset, getConfig(state));
+      state.lastExtraction = {
+        ...extraction,
+        source: `${extraction.source}${state.lastIgnoredPeople.length ? " + ignored" : ""}${state.excludedPersonIds.size ? " + filtered" : ""}`,
+      };
       state.lastAnalysis = analysis;
-      renderSummary(state, extraction, analysis);
+      renderSummary(state, state.lastExtraction, getVisibleAnalysis(state, analysis));
       renderResults(state, analysis);
       setStatus(
         state,
-        `Success: ${analysis.dataset.people.length} people, ${analysis.sessions.length} candidate sessions, ${analysis.combinationsEvaluated} evaluated combinations, ${analysis.displayedRowCount} displayed rows.`,
+        `Success: ${analysis.dataset.people.length} people, ${analysis.sessions.length} candidate sessions, ${analysis.combinationsEvaluated} evaluated combinations, ${analysis.displayedRowCount} displayed rows.${state.lastIgnoredPeople.length ? ` Ignored: ${state.lastIgnoredPeople.length}.` : ""}${state.excludedPersonIds.size ? ` Excluded: ${state.excludedPersonIds.size}.` : ""}`,
         "success"
       );
     } catch (error) {

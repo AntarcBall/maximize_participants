@@ -16,16 +16,21 @@ function buildRuntimeBundle() {
 }
 
 async function minifyJavaScript(source) {
-  const { minify } = require('/usr/share/nodejs/terser');
-  const result = await minify(source, {
-    compress: true,
-    mangle: true,
-    ecma: 2020,
-  });
-  if (!result || !result.code) {
-    throw new Error('Terser did not return minified code');
+  try {
+    const { minify } = require('/usr/share/nodejs/terser');
+    const result = await minify(source, {
+      compress: true,
+      mangle: true,
+      ecma: 2020,
+    });
+    if (!result || !result.code) {
+      throw new Error('Terser did not return minified code');
+    }
+    return result.code;
+  } catch (error) {
+    console.warn(`Minification skipped: ${error && error.message ? error.message : error}`);
+    return source;
   }
-  return result.code;
 }
 
 function toBase64Utf8(source) {

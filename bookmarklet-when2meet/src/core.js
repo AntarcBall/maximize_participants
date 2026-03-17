@@ -188,6 +188,84 @@
     return parseDatasetFromHtml(html);
   }
 
+  function filterDatasetByPersonIds(dataset, excludedPersonIds) {
+    if (!excludedPersonIds || (excludedPersonIds instanceof Set ? excludedPersonIds.size === 0 : excludedPersonIds.length === 0)) {
+      return dataset;
+    }
+
+    const excluded = excludedPersonIds instanceof Set ? excludedPersonIds : new Set(excludedPersonIds);
+    const people = dataset.people.filter((person) => !excluded.has(person.id));
+    assert(people.length > 0, "No people remain after applying excluded-person filters");
+
+    const personIndexById = new Map();
+    people.forEach((person, index) => {
+      personIndexById.set(person.id, index);
+    });
+
+    const timeOfSlot = new Map(dataset.timeOfSlot);
+    const availableAtSlot = new Map();
+    for (const [slotIndex, attendeeIds] of dataset.availableAtSlot.entries()) {
+      const filteredAttendees = new Set();
+      for (const personId of attendeeIds) {
+        if (personIndexById.has(personId)) {
+          filteredAttendees.add(personId);
+        }
+      }
+      availableAtSlot.set(slotIndex, filteredAttendees);
+    }
+
+    return {
+      people,
+      personIndexById,
+      timeOfSlot,
+      availableAtSlot,
+    };
+  }
+
+  function partitionDatasetByAvailability(dataset) {
+    const activePersonIds = new Set();
+    for (const attendeeIds of dataset.availableAtSlot.values()) {
+      for (const personId of attendeeIds) {
+        activePersonIds.add(personId);
+      }
+    }
+
+    const ignoredPeople = dataset.people.filter((person) => !activePersonIds.has(person.id));
+    if (!ignoredPeople.length) {
+      return {
+        dataset,
+        ignoredPeople,
+      };
+    }
+
+    const keptPeople = dataset.people.filter((person) => activePersonIds.has(person.id));
+    const personIndexById = new Map();
+    keptPeople.forEach((person, index) => {
+      personIndexById.set(person.id, index);
+    });
+
+    const availableAtSlot = new Map();
+    for (const [slotIndex, attendeeIds] of dataset.availableAtSlot.entries()) {
+      const filteredAttendees = new Set();
+      for (const personId of attendeeIds) {
+        if (personIndexById.has(personId)) {
+          filteredAttendees.add(personId);
+        }
+      }
+      availableAtSlot.set(slotIndex, filteredAttendees);
+    }
+
+    return {
+      dataset: {
+        people: keptPeople,
+        personIndexById,
+        timeOfSlot: new Map(dataset.timeOfSlot),
+        availableAtSlot,
+      },
+      ignoredPeople,
+    };
+  }
+
   function getZonedParts(epochSeconds, timeZone) {
     const formatter = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
       timeZone,
@@ -316,8 +394,9 @@
         continue;
       }
 
+      const coveredEndEpoch = Math.max(startEpoch, endEpoch - 1);
       const crossesDateBoundary = timestamps.some((timestamp) => !isSameLocalDate(startParts, getZonedParts(timestamp, timeZone))) ||
-        !isSameLocalDate(startParts, getZonedParts(endEpoch, timeZone));
+        !isSameLocalDate(startParts, getZonedParts(coveredEndEpoch, timeZone));
       if (crossesDateBoundary) {
         continue;
       }
@@ -478,6 +557,23 @@
     return COLOR_BY_MEMBERSHIP_MASK[mask] || EMPTY_CELL_COLOR;
   }
 
+  function filterPlansByRequiredPersonIds(plans, dataset, requiredPersonIds) {
+    if (!requiredPersonIds || (requiredPersonIds instanceof Set ? requiredPersonIds.size === 0 : requiredPersonIds.length === 0)) {
+      return plans;
+    }
+
+    const required = requiredPersonIds instanceof Set ? requiredPersonIds : new Set(requiredPersonIds);
+    const requiredIndices = [...required]
+      .map((personId) => dataset.personIndexById.get(personId))
+      .filter((index) => typeof index === "number");
+
+    if (!requiredIndices.length) {
+      return plans;
+    }
+
+    return plans.filter((plan) => requiredIndices.every((personIndex) => membershipMaskForPlanPerson(plan, personIndex) !== 0));
+  }
+
   function membershipText(mask) {
     if (!mask) return "Not covered";
     const labels = [];
@@ -533,6 +629,8 @@
     datasetFromGlobals,
     parseDatasetFromHtml,
     extractDatasetFromPage,
+    filterDatasetByPersonIds,
+    partitionDatasetByAvailability,
     normalizeDataset,
     getZonedParts,
     formatSessionLabelShort,
@@ -545,6 +643,7 @@
     comparePlans,
     membershipMaskForPlanPerson,
     colorForMembershipMask,
+    filterPlansByRequiredPersonIds,
     membershipText,
     planSessionLabels,
     planToTableRow,
