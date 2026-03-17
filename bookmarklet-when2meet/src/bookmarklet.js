@@ -12,7 +12,7 @@
 
   const HOST_ID = "when2meet-multi-session-bookmarklet";
   const PANEL_TITLE = "When2Meet Multi-Session Analyzer";
-  const BOOKMARKLET_VERSION = "v2026.03.17-8";
+  const BOOKMARKLET_VERSION = "v2026.03.17-9";
   const Z_INDEX = "2147483647";
   let panelState = null;
 
@@ -180,6 +180,81 @@
         flex-wrap: wrap;
         gap: 8px;
       }
+      .preview-wrap {
+        background: #ffffff;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        border-radius: 14px;
+        padding: 12px;
+        overflow: hidden;
+      }
+      .preview-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .preview-title {
+        font-size: 13px;
+        font-weight: 800;
+        color: #0f172a;
+      }
+      .preview-subtitle {
+        font-size: 11px;
+        color: #64748b;
+      }
+      .preview-grid-wrap {
+        overflow: auto;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+      }
+      .preview-grid {
+        display: grid;
+        width: max-content;
+        min-width: 100%;
+        background: #fff;
+      }
+      .preview-cell {
+        min-height: 28px;
+        border-right: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e2e8f0;
+        box-sizing: border-box;
+        font-size: 11px;
+      }
+      .preview-corner,
+      .preview-day,
+      .preview-time {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f1f5f9;
+        color: #334155;
+        font-weight: 700;
+        padding: 4px 6px;
+      }
+      .preview-time {
+        justify-content: flex-end;
+        padding-right: 8px;
+      }
+      .preview-slot {
+        position: relative;
+        background: #f8fafc;
+      }
+      .preview-slot.active {
+        outline: 2px solid rgba(15, 23, 42, 0.15);
+        outline-offset: -2px;
+      }
+      .preview-slot-label {
+        position: absolute;
+        inset: 3px 4px;
+        font-size: 10px;
+        font-weight: 800;
+        color: #0f172a;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        pointer-events: none;
+      }
       .legend-item {
         display: inline-flex;
         align-items: center;
@@ -289,6 +364,10 @@
       .people-row-grid {
         min-height: 42px;
       }
+      .session-row-grid.is-selected .session-cell,
+      .people-row-grid.is-selected .person-cell {
+        box-shadow: inset 0 0 0 2px #2563eb;
+      }
       .session-row-grid.data-row-even .session-cell,
       .people-row-grid.data-row-even .person-cell {
         background: rgba(248, 250, 252, 0.9);
@@ -396,6 +475,7 @@
           <section class="status" data-kind="info" id="status">Ready. ${escapeHtml(BOOKMARKLET_VERSION)}</section>
           <section class="summary-grid" id="summary"></section>
           <section class="legend" id="legend"></section>
+          <section class="preview-wrap" id="previewWrap"></section>
           <section class="table-wrap" id="resultsWrap">
             <div class="table-empty">Run the analyzer to see ranked plans.</div>
           </section>
@@ -412,6 +492,7 @@
       status: shadowRoot.getElementById("status"),
       summary: shadowRoot.getElementById("summary"),
       legend: shadowRoot.getElementById("legend"),
+      previewWrap: shadowRoot.getElementById("previewWrap"),
       resultsWrap: shadowRoot.getElementById("resultsWrap"),
       closeButton: shadowRoot.querySelector('[data-action="close"]'),
       refreshButton: shadowRoot.querySelector('[data-action="refresh"]'),
@@ -626,6 +707,109 @@
     });
   }
 
+
+  function getLocalDateKey(epochSeconds, timeZone) {
+    const parts = core.getZonedParts(epochSeconds, timeZone);
+    return `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
+  }
+
+  function getLocalTimeKey(epochSeconds, timeZone) {
+    const parts = core.getZonedParts(epochSeconds, timeZone);
+    return `${String(parts.hour).padStart(2, "0")}:${String(parts.minute).padStart(2, "0")}`;
+  }
+
+  function getDayLabel(epochSeconds, timeZone) {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      month: "short",
+      day: "numeric",
+      weekday: "short",
+    });
+    return formatter.format(new Date(epochSeconds * 1000));
+  }
+
+  function collectPreviewAxes(dataset, timeZone) {
+    const slotEpochs = [...dataset.timeOfSlot.values()].sort((a, b) => a - b);
+    const dayEpochByKey = new Map();
+    const timeKeys = new Set();
+    for (const epoch of slotEpochs) {
+      const parts = core.getZonedParts(epoch, timeZone);
+      if (parts.minute % 30 !== 0) continue;
+      const dayKey = getLocalDateKey(epoch, timeZone);
+      if (!dayEpochByKey.has(dayKey)) {
+        dayEpochByKey.set(dayKey, epoch);
+      }
+      timeKeys.add(getLocalTimeKey(epoch, timeZone));
+    }
+    const days = [...dayEpochByKey.entries()].map(([key, epoch]) => ({ key, label: getDayLabel(epoch, timeZone), epoch }));
+    days.sort((a, b) => a.epoch - b.epoch);
+    const times = [...timeKeys].sort();
+    return { days, times };
+  }
+
+  function colorForPreviewMask(mask) {
+    return core.colorForMembershipMask(mask);
+  }
+
+  function renderPreview(state, analysis, planIndex) {
+    const plan = analysis.plans[planIndex] || analysis.plans[0];
+    if (!plan) {
+      state.elements.previewWrap.innerHTML = '<div class="table-empty">No preview available.</div>';
+      return;
+    }
+
+    const timeZone = analysis.config.timeZone;
+    const { days, times } = collectPreviewAxes(analysis.dataset, timeZone);
+    const membershipByCell = new Map();
+
+    plan.sessions.forEach((session, sessionIndex) => {
+      if (!session) return;
+      for (let epoch = session.startEpoch; epoch < session.endEpoch; epoch += 30 * 60) {
+        const key = `${getLocalDateKey(epoch, timeZone)}|${getLocalTimeKey(epoch, timeZone)}`;
+        membershipByCell.set(key, (membershipByCell.get(key) || 0) | (1 << sessionIndex));
+      }
+    });
+
+    const previewWrap = state.elements.previewWrap;
+    previewWrap.replaceChildren();
+
+    const head = createDiv('preview-head');
+    const titleWrap = createDiv();
+    titleWrap.appendChild(createDiv('preview-title', 'Selected plan timetable'));
+    titleWrap.appendChild(createDiv('preview-subtitle', `Click any candidate row below to update this preview. Showing plan #${planIndex + 1}.`));
+    const meta = createDiv('preview-subtitle', plan.sessions.filter(Boolean).map((session, index) => `S${index + 1}: ${formatEnglishSessionLabel(session, timeZone)}`).join(' · '));
+    head.appendChild(titleWrap);
+    head.appendChild(meta);
+
+    const gridWrap = createDiv('preview-grid-wrap');
+    const grid = createDiv('preview-grid');
+    grid.style.gridTemplateColumns = `88px repeat(${days.length}, minmax(120px, 1fr))`;
+
+    grid.appendChild(createDiv('preview-cell preview-corner', 'Time'));
+    days.forEach((day) => {
+      grid.appendChild(createDiv('preview-cell preview-day', day.label));
+    });
+
+    times.forEach((time) => {
+      grid.appendChild(createDiv('preview-cell preview-time', time));
+      days.forEach((day) => {
+        const cellKey = `${day.key}|${time}`;
+        const membership = membershipByCell.get(cellKey) || 0;
+        const cell = createDiv(`preview-cell preview-slot${membership ? ' active' : ''}`);
+        cell.style.background = colorForPreviewMask(membership);
+        if (membership) {
+          cell.title = core.membershipText(membership);
+          cell.appendChild(createDiv('preview-slot-label', core.membershipText(membership)));
+        }
+        grid.appendChild(cell);
+      });
+    });
+
+    gridWrap.appendChild(grid);
+    previewWrap.appendChild(head);
+    previewWrap.appendChild(gridWrap);
+  }
+
   function renderSummary(state, extraction, analysis) {
     const cards = [
       ["Extraction", extraction.source === "window" ? "window globals" : "DOM fallback"],
@@ -690,10 +874,13 @@
 
     const sessionBody = createDiv("pane-body session-body");
     analysis.plans.forEach((plan, rowIndex) => {
-      const rowNode = createDiv(`session-row-grid ${rowIndex % 2 === 1 ? "data-row-even" : "data-row-odd"}`);
+      const rowNode = createDiv(`session-row-grid ${rowIndex % 2 === 1 ? "data-row-even" : "data-row-odd"}${rowIndex === 0 ? " is-selected" : ""}`);
+      rowNode.dataset.planIndex = String(rowIndex);
+      rowNode.style.cursor = 'pointer';
       for (let index = 0; index < 3; index += 1) {
         rowNode.appendChild(renderSessionCell(plan.sessions[index], index, analysis.config.timeZone));
       }
+      rowNode.addEventListener('click', () => selectPlan(state, analysis, rowIndex));
       sessionBody.appendChild(rowNode);
     });
 
@@ -715,8 +902,10 @@
     const peopleBody = createDiv("pane-body people-body");
     analysis.plans.forEach((plan, rowIndex) => {
       const row = core.planToTableRow(plan, analysis.dataset);
-      const rowNode = createDiv(`people-row-grid ${rowIndex % 2 === 1 ? "data-row-even" : "data-row-odd"}`);
+      const rowNode = createDiv(`people-row-grid ${rowIndex % 2 === 1 ? "data-row-even" : "data-row-odd"}${rowIndex === 0 ? " is-selected" : ""}`);
+      rowNode.dataset.planIndex = String(rowIndex);
       rowNode.style.gridTemplateColumns = peopleGridTemplate;
+      rowNode.style.cursor = 'pointer';
       row.personCells.forEach((cell) => {
         const personCell = createDiv("person-cell");
         personCell.title = `${cell.personName}: ${cell.label}`;
@@ -725,6 +914,7 @@
         personCell.appendChild(fill);
         rowNode.appendChild(personCell);
       });
+      rowNode.addEventListener('click', () => selectPlan(state, analysis, rowIndex));
       peopleBody.appendChild(rowNode);
     });
 
@@ -736,6 +926,16 @@
 
     state.elements.resultsWrap.replaceChildren(splitResults);
     setupResultsScrollSync(state);
+    selectPlan(state, analysis, 0);
+  }
+
+  function selectPlan(state, analysis, planIndex) {
+    state.selectedPlanIndex = planIndex;
+    const rows = state.elements.resultsWrap.querySelectorAll('[data-plan-index]');
+    rows.forEach((row) => {
+      row.classList.toggle('is-selected', Number(row.dataset.planIndex) === planIndex);
+    });
+    renderPreview(state, analysis, planIndex);
   }
 
   function renderError(state, error) {
