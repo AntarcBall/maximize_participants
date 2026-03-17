@@ -11,7 +11,7 @@
   const SESSION_LENGTH_OPTIONS = Object.freeze([60, 90]);
   const WEEKLY_SESSION_COUNT_OPTIONS = Object.freeze([1, 2, 3]);
   const DEFAULT_TOP_LIMIT = 50;
-  const EMPTY_CELL_COLOR = "#eceff3";
+  const EMPTY_CELL_COLOR = "#6b7280";
   const SLOT_SECONDS = 15 * 60;
   const NAME_COLLATOR = new Intl.Collator(DISPLAY_LOCALE, {
     numeric: true,

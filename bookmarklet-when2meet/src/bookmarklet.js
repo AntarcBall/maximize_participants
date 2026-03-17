@@ -216,12 +216,11 @@
         position: sticky;
         left: 0;
         z-index: 2;
-        background: inherit;
       }
-      .sticky-col.session-2 {
+      .sticky-col.session-col-2 {
         left: 168px;
       }
-      .sticky-col.session-3 {
+      .sticky-col.session-col-3 {
         left: 336px;
       }
       thead .sticky-col {
@@ -234,14 +233,52 @@
         max-width: 168px;
         text-align: left;
         font-weight: 600;
+        background: #dbe4ee;
+        color: #0f172a;
+        background-clip: padding-box;
+      }
+      tbody .session-col {
+        z-index: 3;
+        background: #dbe4ee;
+        box-shadow: inset -1px 0 0 #cbd5e1;
+      }
+      tbody tr:nth-child(even) .session-col {
+        background: #cfd9e6;
+      }
+      .session-label {
+        display: flex;
+        align-items: center;
+        min-height: 36px;
+        padding: 6px 8px;
+        border-radius: 8px;
+        white-space: normal;
+        word-break: break-word;
+        line-height: 1.35;
+        font-size: 12px;
+        font-weight: 700;
+        color: #111827;
+        background: #ffffff;
+        box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+      }
+      .session-col-1 .session-label {
+        background: #fecaca;
+      }
+      .session-col-2 .session-label {
+        background: #bbf7d0;
+      }
+      .session-col-3 .session-label {
+        background: #bfdbfe;
       }
       .session-empty {
+        color: #94a3b8;
+      }
+      .session-empty .session-label {
+        background: rgba(255, 255, 255, 0.55);
         color: #94a3b8;
       }
       .person-head {
         writing-mode: vertical-rl;
         text-orientation: mixed;
-        transform: rotate(180deg);
         min-width: 34px;
         width: 34px;
         font-size: 11px;
@@ -274,8 +311,8 @@
           max-height: 92vh;
         }
         .sticky-col,
-        .sticky-col.session-2,
-        .sticky-col.session-3 {
+        .sticky-col.session-col-2,
+        .sticky-col.session-col-3 {
           position: static;
         }
         table {
@@ -320,7 +357,7 @@
           <section class="table-wrap" id="resultsWrap">
             <div class="table-empty">Run the analyzer to see ranked plans.</div>
           </section>
-          <div class="footer-note">Colors encode person coverage across Session 1/2/3 using additive RGB mixing. Empty cells stay neutral gray.</div>
+          <div class="footer-note">Colors encode person coverage across Session 1/2/3 using additive RGB mixing. Uncovered people stay dark gray.</div>
         </div>
       </section>
     `;
@@ -452,6 +489,42 @@
     };
   }
 
+  function formatEnglishSessionLabel(session, timeZone) {
+    if (!session) return "";
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      month: "short",
+      day: "numeric",
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    const startParts = Object.fromEntries(
+      formatter
+        .formatToParts(new Date(session.startEpoch * 1000))
+        .filter((part) => part.type !== "literal")
+        .map((part) => [part.type, part.value])
+    );
+    const endParts = Object.fromEntries(
+      formatter
+        .formatToParts(new Date(session.endEpoch * 1000))
+        .filter((part) => part.type !== "literal")
+        .map((part) => [part.type, part.value])
+    );
+    return `${startParts.month} ${startParts.day} (${startParts.weekday}) ${startParts.hour}:${startParts.minute}-${endParts.hour}:${endParts.minute}`;
+  }
+
+  function renderSessionCell(session, index, timeZone) {
+    const englishLabel = formatEnglishSessionLabel(session, timeZone);
+    const longLabel = session ? session.labelLong : "";
+    return `
+      <td class="sticky-col session-col session-col-${index + 1}${session ? "" : " session-empty"}" title="${session ? escapeHtml(longLabel) : ""}">
+        <span class="session-label">${session ? escapeHtml(englishLabel) : ""}</span>
+      </td>
+    `;
+  }
+
   function renderSummary(state, extraction, analysis) {
     const cards = [
       ["Extraction", extraction.source === "window" ? "window globals" : "DOM fallback"],
@@ -500,19 +573,13 @@
 
   function renderResults(state, analysis) {
     const peopleHead = analysis.dataset.people
-      .map((person) => `<th class="person-head">${escapeHtml(person.name)}</th>`)
+      .map((person) => `<th class="person-head" title="${escapeHtml(person.name)}">${escapeHtml(person.name)}</th>`)
       .join("");
 
     const rows = analysis.plans
       .map((plan) => {
         const row = core.planToTableRow(plan, analysis.dataset);
-        const sessionCells = row.sessionLabels
-          .map(
-            (label, index) => `
-              <td class="sticky-col session-col session-${index + 1}${label ? "" : " session-empty"}">${label ? escapeHtml(label) : "&nbsp;"}</td>
-            `
-          )
-          .join("");
+        const sessionCells = Array.from({ length: 3 }, (_, index) => renderSessionCell(plan.sessions[index], index, analysis.config.timeZone)).join("");
         const personCells = row.personCells
           .map(
             (cell) => `
@@ -530,9 +597,9 @@
       <table>
         <thead>
           <tr>
-            <th class="sticky-col session-col">Session 1</th>
-            <th class="sticky-col session-col session-2">Session 2</th>
-            <th class="sticky-col session-col session-3">Session 3</th>
+            <th class="sticky-col session-col session-col-1">Session 1</th>
+            <th class="sticky-col session-col session-col-2">Session 2</th>
+            <th class="sticky-col session-col session-col-3">Session 3</th>
             ${peopleHead}
           </tr>
         </thead>

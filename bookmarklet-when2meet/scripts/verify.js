@@ -50,7 +50,7 @@ const koreanSortedNames = [...peopleNames].sort((left, right) => left.localeComp
 assert.deepStrictEqual(peopleNames, koreanSortedNames, 'People must be sorted with Korean locale ordering');
 
 const expectedColors = {
-  0: '#eceff3',
+  0: '#6b7280',
   1: 'rgb(255, 0, 0)',
   2: 'rgb(0, 255, 0)',
   3: 'rgb(255, 255, 0)',
